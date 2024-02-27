@@ -19,7 +19,6 @@ def create_connection(db_file="calories.db"):
     try:
         conn = sqlite3.connect("calories.db")
         cur = conn.cursor()
-        print(f"Connected to the database '{db_file} successfully!")
         return conn, cur
     except sqlite3.Error as e:
         print(f"ERROR: could not establish connection to '{db_file}' ({e})")
@@ -219,9 +218,9 @@ def select_specific_user(username: str, conn, cur) -> str:
     Returns:
         user_id: the id of the user specified
     """
-    sql = "SELECT id FROM users WHERE username=?"
+    #sql = "SELECT id FROM users WHERE username=?"
     try:
-        cur.execute(sql, (username))
+        cur.execute("SELECT id FROM users WHERE username=?", (username,))
         user_id = cur.fetchone()[0]
         return user_id
     except sqlite3.Error as e:
@@ -250,7 +249,7 @@ def create_macro(username: str, macro: Macro, conn, cur):
                           macro.carb_pct, macro.cal_goal))
         conn.commit()
         macro_id = cur.lastrowid
-        cur.execute(usermacros_sql, user_id, macro_id)
+        cur.execute(usermacros_sql, (user_id, macro_id))
         print(f"Recorded {macro.name} for user {username}")
     except sqlite3.Error as e:
         print(f"ERROR: Could not record macro {macro.name}! ({e})")
@@ -300,7 +299,7 @@ def select_food_item(food_name: str, conn, cur) -> str:
     sql = "SELECT id FROM foods WHERE name=?"
 
     try:
-        cur.execute(sql, (food_name))
+        cur.execute(sql, (food_name,))
         food_id = cur.fetchone()[0]
         return food_id
     except sqlite3.Error as e:
@@ -319,8 +318,8 @@ def create_entry(username: str, food_name: str, conn, cur):
         curr (sqlite3.Cursor): A cursor object for executing SQL queries.
     """
 
-    food_id = select_specific_user(username, conn, cur)
-    user_id = select_food_item(food_name, conn, cur)
+    user_id = select_specific_user(username, conn, cur)
+    food_id = select_food_item(food_name, conn, cur)
     sql = "INSERT INTO foodentries(foodID, userID) VALUES(?, ?)"
 
     try:
@@ -343,7 +342,7 @@ def show_current_entry(username: str, conn, cur):
         curr (sqlite3.Cursor): A cursor object for executing SQL queries.
     """
 
-    today = datetime.date.today()
+    today = datetime.date.today().isoformat()
     user_id = select_specific_user(username, conn, cur)
     sql = "SELECT * FROM foodentries WHERE userID=? AND date=?"
 
