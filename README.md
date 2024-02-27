@@ -1,5 +1,5 @@
 # cals.py
-A simple command line app to track your calories.
+A simple command line app to track your calories using Typer, Rich, and SQLite3.
 
 ### How to Use:
     ```
