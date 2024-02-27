@@ -218,9 +218,9 @@ def select_specific_user(username: str, conn, cur) -> str:
     Returns:
         user_id: the id of the user specified
     """
-    #sql = "SELECT id FROM users WHERE username=?"
+    sql = "SELECT id FROM users WHERE username=?"
     try:
-        cur.execute("SELECT id FROM users WHERE username=?", (username,))
+        cur.execute(sql, (username,))
         user_id = cur.fetchone()[0]
         return user_id
     except sqlite3.Error as e:
@@ -344,13 +344,18 @@ def show_current_entry(username: str, conn, cur):
 
     today = datetime.date.today().isoformat()
     user_id = select_specific_user(username, conn, cur)
-    sql = "SELECT * FROM foodentries WHERE userID=? AND date=?"
+    sql = """
+    SELECT users.username, foods.name AS food, foods.calories, foodentries.date, foodentries.time
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE users.id = ? AND date = ?
+    """
 
     try:
         cur.execute(sql, (user_id, today))
         rows = cur.fetchall()
-        for row in rows:
-            print(row)
+        return rows
     except sqlite3.Error as e:
         print(f"Could not fetch entries for {username} on {today}! ({e})")
 

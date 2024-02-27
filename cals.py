@@ -63,7 +63,22 @@ def show(username: str):
     typer.echo(f"Printing {username}'s food diary for {today}")
 
     conn, cur = create_connection()
-    show_current_entry(username, conn, cur)
+    entries = show_current_entry(username, conn, cur)
+    console.print("[bold magenta]Food Diary[/bold magenta]")
+
+    table = Table(show_header=True, header_style="bold blue")
+    table.add_column("User", style="dim", width=6)
+    table.add_column("Meal", min_width=20)
+    table.add_column("Calories", min_width=12)
+    table.add_column("Date", min_width=12)
+    table.add_column("Time", min_width=12)
+
+    for i, entry in enumerate(entries):
+        table.add_row(entry[0], entry[1], str(entry[2]), str(entry[3]))
+
+    console.print(table)
+
+    conn.close()
 
 
 if __name__ == '__main__':
