@@ -354,3 +354,24 @@ def show_current_entry(username: str, conn, cur):
             print(row)
     except sqlite3.Error as e:
         print(f"Could not fetch entries for {username} on {today}! ({e})")
+
+
+def create_all_tables(conn, cur):
+    """
+    Creates all tables for the calories database.
+
+    Args:
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    create_users_table(conn, cur)
+    conn, cur = create_connection()
+    create_macros_table(conn, cur)
+    conn, cur = create_connection()
+    create_usermacros_table(conn, cur)
+    conn, cur = create_connection()
+    create_foods_table(conn, cur)
+    conn, cur = create_connection()
+    create_foodentries_table(conn, cur)
+    conn, cur = create_connection()
