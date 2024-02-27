@@ -1,7 +1,7 @@
 # cals.py
 A simple command line app to track your calories.
 
-## How to Use:
+### How to Use:
     ```
     python3 cals.py [COMMAND] [ARGS]
     
