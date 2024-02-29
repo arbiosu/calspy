@@ -365,6 +365,40 @@ def get_all_foods(conn, cur):
         conn.close()
 
 
+def update_food_item(food: Food, cols_to_update: list, conn,
+                     cur):
+    """
+    Update a food item's information.
+
+    Args:
+        food_name: a string representing the name of the food item
+        food: a Food object.
+        cols_to_update: a list representing the columns to update.
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    set_clause = ", ".join(f"{col} = ?" for col in cols_to_update)
+
+    sql = f"""
+    UPDATE foods
+    SET {set_clause}
+    WHERE name = ?
+    """
+
+    values = [getattr(food, col) for col in cols_to_update] + [food.name]
+    print(values)
+
+    try:
+        cur.execute(sql, tuple(values))
+        conn.commit()
+        print(f"Successfully updated {food.name} in the database.")
+    except sqlite3.Error as e:
+        print(f"Could not update {food.name} in the database! ({e})")
+    finally:
+        conn.close()
+
+
 def create_entry(username: str, food_name: str, conn, cur):
     """
     Creates a foodentry for a user, indicating they consumed this food on the
@@ -471,4 +505,3 @@ def create_all_tables(conn, cur):
     create_foods_table(conn, cur)
     conn, cur = create_connection()
     create_foodentries_table(conn, cur)
-    conn, cur = create_connection()
