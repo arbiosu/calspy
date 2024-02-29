@@ -12,10 +12,13 @@ from database import (
     create_food,
     create_entry,
     show_current_entry,
+    show_weekly_entries,
     get_total_calories_today,
+    get_weekly_calories,
     get_cal_goal,
     get_all_foods,
     update_food_item,
+    update_user,
 )
 
 
@@ -127,9 +130,9 @@ def upd(
 
 ):
     if food:
-        print(
+        console.print(
             f"Please enter the values you would like to UPDATE for {food}" +
-            "(type: [bold red] food)[/bold red]"
+            "(type: [bold red]food)[/bold red]"
             )
         cols, food_item = [], Food(food)  # store columns user wants to update
 
@@ -153,9 +156,58 @@ def upd(
         typer.echo("Updating food item...")
         update_food_item(food_item, cols, conn, cur)
     if user:
-        pass
+        console.print(
+            f"Please enter the values you would like to UPDATE for {user}  " +
+            "(type: [bold red]user)[/bold red]"
+            )
+        cols, user = [], User(user)
+
+        cur_weight = input("Weight: ")
+        cols.append("weight") if cur_weight != "" else None
+        user.weight = int(cur_weight) if cur_weight != "" else None
+
+        weight_goal = input("Weight Goal: ")
+        cols.append("weightGoal") if weight_goal != "" else None
+        user.weight_goal = weight_goal if weight_goal != "" else None
+
+        conn, cur = create_connection()
+        typer.echo("Updating user profile...")
+        update_user(user, cols, conn, cur)
+
     if macro:
         pass
+
+@app.command(short_help="Shows the weekly entries for the given user.")
+def weekly(username: str):
+    typer.echo(f"Displaying {username}'s weekly food diary...")
+
+    conn, cur = create_connection()
+    entries = show_weekly_entries(username, conn, cur)
+    console.print("[bold magenta]Weekly Food Diary:  [/bold magenta]")
+
+    table = Table(show_header=True)
+    table.add_column("User", style="dim", header_style="red", width=6)
+    table.add_column("Meal", justify="center", min_width=20)
+    table.add_column("Calories", header_style="green", style="green",
+                     min_width=12)
+    table.add_column("Date", style="magenta", header_style="magenta",
+                     min_width=8)
+
+    for i, entry in enumerate(entries):
+        table.add_row(entry[0], entry[1], str(entry[2]), str(entry[3]))
+
+    console.print(table)
+
+    conn, cur = create_connection()
+    weekly_cals = get_weekly_calories(username, conn, cur)
+    conn, cur = create_connection()
+    cal_goal = get_cal_goal(username, conn, cur)
+    cal_goal *= 7
+
+    console.print(
+        f"[green3]Weekly Calories: {weekly_cals} / [/green3]" +
+        f"[bold red]{cal_goal}[/bold red]"
+        )
 
 
 if __name__ == '__main__':
