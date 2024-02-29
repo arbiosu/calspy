@@ -250,9 +250,44 @@ def create_macro(username: str, macro: Macro, conn, cur):
         conn.commit()
         macro_id = cur.lastrowid
         cur.execute(usermacros_sql, (user_id, macro_id))
+        conn.commit()
         print(f"Recorded {macro.name} for user {username}")
     except sqlite3.Error as e:
         print(f"ERROR: Could not record macro {macro.name}! ({e})")
+    finally:
+        conn.close()
+
+
+def get_cal_goal(username: str, conn, cur):
+    """
+    Gets the user's calorie goal for a specified macro.
+    NOTE: currently only retrieves the user's most recent macro.
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+
+    Returns:
+        cal_goal: the user's calorie goal for the specified macro.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT m.name, m.calGoal
+    FROM usermacros
+    JOIN macros AS m ON usermacros.macroID = m.id
+    WHERE usermacros.userID = ?
+    ORDER BY usermacros.macroID
+    DESC LIMIT 1
+    """
+
+    try:
+        cur.execute(sql, (user_id,))
+        cal_goal = cur.fetchone()[1]
+        return cal_goal
+    except sqlite3.Error as e:
+        print(f"Error getting calorie goal for {username}! ({e})")
     finally:
         conn.close()
 
@@ -306,6 +341,30 @@ def select_food_item(food_name: str, conn, cur) -> str:
         print(f"Could not fetch the id of {food_name}! ({e})")
 
 
+def get_all_foods(conn, cur):
+    """
+    Retrieve all foods stored in the database, sorted in descending order of
+    calorie content.
+
+    Args:
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+
+    Returns:
+        food_list: a table of all foods stored in the database sorted in
+        descending order of calorie content.
+    """
+
+    try:
+        cur.execute("SELECT * FROM foods ORDER BY calories DESC")
+        food_list = cur.fetchall()
+        return food_list
+    except sqlite3.Error as e:
+        print(f"Could not retrieve all food items! ({e})")
+    finally:
+        conn.close()
+
+
 def create_entry(username: str, food_name: str, conn, cur):
     """
     Creates a foodentry for a user, indicating they consumed this food on the
@@ -340,12 +399,14 @@ def show_current_entry(username: str, conn, cur):
         username: a string representing the user
         conn (sqlite3.Connection): A connection object.
         curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    Returns:
+        rows: a table showing all entries a user has made for today.
     """
 
     today = datetime.date.today().isoformat()
     user_id = select_specific_user(username, conn, cur)
     sql = """
-    SELECT users.username, foods.name AS food, foods.calories, foodentries.date, foodentries.time
+    SELECT users.username, foods.name AS food, foods.calories, foodentries.time
     FROM foodentries
     JOIN users ON foodentries.userID = users.id
     JOIN foods ON foodentries.foodID = foods.id
@@ -358,6 +419,38 @@ def show_current_entry(username: str, conn, cur):
         return rows
     except sqlite3.Error as e:
         print(f"Could not fetch entries for {username} on {today}! ({e})")
+    finally:
+        conn.close()
+
+
+def get_total_calories_today(username: str, conn, cur):
+    """
+    Gets the user's total caloric intake for today.
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    today = datetime.date.today().isoformat()
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT SUM(foods.calories)
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE users.id = ? AND date = ?
+    """
+
+    try:
+        cur.execute(sql, (user_id, today))
+        total_calories = cur.fetchone()[0]
+        return total_calories
+    except sqlite3.Error as e:
+        print(f"Could not fetch {username}'s calories for {today}! ({e})")
+    finally:
+        conn.close()
 
 
 def create_all_tables(conn, cur):
