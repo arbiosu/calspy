@@ -115,6 +115,19 @@ def show(username: str):
         f"[bold red]{cal_goal}[/bold red]"
         )
 
+    if total_cals > cal_goal:
+        console.print(
+            ":warning:" + " " +
+            "[bold red]You have exceeded your daily calorie goal![/bold red]"
+            + ":warning:"
+            )
+    else:
+        console.print(
+            ":white_heavy_check_mark:" + " " +
+            "[bold green]You are within your daily calorie goal![/]"
+            + ":white_heavy_check_mark:"
+        )
+
 
 @app.command(short_help="Retrieves all foods in the database.")
 def foods():
