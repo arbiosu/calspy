@@ -62,7 +62,7 @@ class Food:
     carbs: int
     """
 
-    def __init__(self, name, calories, protein,  fat, carbs):
+    def __init__(self, name, calories=0, protein=0,  fat=0, carbs=0):
 
         self.name = name
         self.calories = calories
