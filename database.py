@@ -48,7 +48,6 @@ def create_users_table(conn, cur):
                 weightGoal INTEGER);
                 """)
         conn.commit()
-        print("Successfully created the users table.")
     except sqlite3.Error as e:
         print(f"ERROR: could not create users table! ({e})")
     finally:
@@ -83,7 +82,6 @@ def create_macros_table(conn, cur):
                 calGoal INTEGER);
                 """)
         conn.commit()
-        print("Successfully created the macros table.")
     except sqlite3.Error as e:
         print(f"ERROR: could not create macros table! ({e})")
     finally:
@@ -110,7 +108,6 @@ def create_usermacros_table(conn, cur):
                 macroID INTEGER REFERENCES macros(id));
                 """)
         conn.commit()
-        print("Successfully created the usermacros table.")
     except sqlite3.Error as e:
         print(f"ERROR: could not create usermacros table! ({e})")
     finally:
@@ -145,7 +142,6 @@ def create_foods_table(conn, cur):
                 carbs INTEGER);
                 """)
         conn.commit()
-        print("Successfully created the foods table.")
     except sqlite3.Error as e:
         print(f"ERROR: could not create foods table! ({e})")
     finally:
@@ -179,7 +175,6 @@ def create_foodentries_table(conn, cur):
                 );
                 """)
         conn.commit()
-        print("Successfully created the foodentries table.")
     except sqlite3.Error as e:
         print(f"ERROR: could not create foodentries table! ({e})")
     finally:
@@ -198,7 +193,7 @@ def create_user(user: User, conn, cur):
 
     sql = "INSERT INTO users(username, weight, weightGoal) VALUES (?, ?, ?)"
     try:
-        cur.execute(sql, (user.username, user.weight, user.weight_goal))
+        cur.execute(sql, (user.username, user.weight, user.weightGoal))
         conn.commit()
         print(f"Welcome, {user.username}.")
     except sqlite3.Error as e:
@@ -225,6 +220,37 @@ def select_specific_user(username: str, conn, cur) -> str:
         return user_id
     except sqlite3.Error as e:
         print(f"Could not fetch the id of the user: {username}! ({e})")
+
+
+def update_user(user: User, cols_to_update: list, conn, cur):
+    """
+    Updates the specified user's information.
+
+    Args:
+        user: a User object.
+        cols_to_update: a list representing the columns to be updated.
+        conn (sqlite3.Connection): A connection object
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries
+    """
+
+    set_clause = ", ".join(f"{col} = ?" for col in cols_to_update)
+
+    sql = f"""
+    UPDATE users
+    SET {set_clause}
+    WHERE username = ?
+    """
+
+    values = [getattr(user, col) for col in cols_to_update] + [user.username]
+
+    try:
+        cur.execute(sql, tuple(values))
+        conn.commit()
+        print(f"Successfully updated {user.username} in the database.")
+    except sqlite3.Error as e:
+        print(f"ERROR: Could not update {user.username}'s profile! ({e})")
+    finally:
+        conn.close()
 
 
 def create_macro(username: str, macro: Macro, conn, cur):
@@ -387,7 +413,6 @@ def update_food_item(food: Food, cols_to_update: list, conn,
     """
 
     values = [getattr(food, col) for col in cols_to_update] + [food.name]
-    print(values)
 
     try:
         cur.execute(sql, tuple(values))
@@ -457,6 +482,38 @@ def show_current_entry(username: str, conn, cur):
         conn.close()
 
 
+def show_weekly_entries(username: str, conn, cur):
+    """
+    Shows all entries for the current week. (Sunday - Saturday)
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    Returns:
+        rows: a table showing all entries a user has made for the current week.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT users.username, foods.name, foods.calories, foodentries.date
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE foodentries.date BETWEEN DATE('now', 'weekday 0', '-6 days') AND DATE
+    ('now', 'weekday 0') AND users.id = ?
+    """
+
+    try:
+        cur.execute(sql, (user_id,))
+        rows = cur.fetchall()
+        return rows
+    except sqlite3.Error as e:
+        print(f"Could not fetch the weekly entries for {username}! ({e})")
+    finally:
+        conn.close()
+
+
 def get_total_calories_today(username: str, conn, cur):
     """
     Gets the user's total caloric intake for today.
@@ -483,6 +540,36 @@ def get_total_calories_today(username: str, conn, cur):
         return total_calories
     except sqlite3.Error as e:
         print(f"Could not fetch {username}'s calories for {today}! ({e})")
+    finally:
+        conn.close()
+
+
+def get_weekly_calories(username: str, conn, cur):
+    """
+    Gets the user's total caloric intake for the current week.
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT SUM(foods.calories)
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE foodentries.date BETWEEN DATE('now', 'weekday 0', '-6 days') AND DATE
+    ('now', 'weekday 0') AND users.id = ?
+    """
+
+    try:
+        cur.execute(sql, (user_id,))
+        weekly_calories = cur.fetchone()[0]
+        return weekly_calories
+    except sqlite3.Error as e:
+        print(f"Could not fetch {username}'s weekly calories! ({e})")
     finally:
         conn.close()
 
