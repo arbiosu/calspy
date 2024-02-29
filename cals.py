@@ -13,12 +13,15 @@ from database import (
     create_entry,
     show_current_entry,
     show_weekly_entries,
+    show_monthly_entries,
     get_total_calories_today,
     get_weekly_calories,
+    get_monthly_calories,
     get_cal_goal,
     get_all_foods,
     update_food_item,
     update_user,
+    adjust_entry,
 )
 
 
@@ -57,7 +60,20 @@ def add(name: str, calories, protein, fat, carbs: int):
 
 
 @app.command(short_help='Creates a new food entry for the user.')
-def entry(username: str, food_name: str):
+def entry(
+    username: str,
+    food_name: str,
+    date: Annotated[str, typer.Option(
+        help="Date food was consumed. MUST be in YYYY-MM-DD format."
+        )] = ""
+):
+    if date:
+        typer.echo(
+            f"Adding {food_name} to {username}'s food diary for {date}."
+            )
+        conn, cur = create_connection()
+        adjust_entry(username, food_name, date, conn, cur)
+        return
     today = datetime.datetime.now().isoformat()
     typer.echo(f"Adding {food_name} to {username}'s food diary for {today}.")
 
@@ -177,6 +193,7 @@ def upd(
     if macro:
         pass
 
+
 @app.command(short_help="Shows the weekly entries for the given user.")
 def weekly(username: str):
     typer.echo(f"Displaying {username}'s weekly food diary...")
@@ -207,6 +224,65 @@ def weekly(username: str):
     console.print(
         f"[green3]Weekly Calories: {weekly_cals} / [/green3]" +
         f"[bold red]{cal_goal}[/bold red]"
+        )
+
+    if weekly_cals > cal_goal:
+        console.print(
+            ":warning:" + " " +
+            "[bold red]You have exceeded your weekly calorie goal![/bold red]"
+            + ":warning:"
+            )
+    else:
+        console.print(
+            ":white_heavy_check_mark:" + " " +
+            "[bold green]You are within your weekly calorie goal![/bold green]"
+            + ":white_heavy_check_mark:"
+            )
+
+
+@app.command(short_help="Shows the monthly entries for the given user.")
+def monthly(username: str):
+    typer.echo(f"Displaying {username}'s monthly food diary...")
+
+    conn, cur = create_connection()
+    entries = show_monthly_entries(username, conn, cur)
+    console.print("[bold magenta]Monthly Food Diary:  [/bold magenta]")
+
+    table = Table(show_header=True)
+    table.add_column("User", style="dim", header_style="red", width=6)
+    table.add_column("Meal", justify="center", min_width=20)
+    table.add_column("Calories", header_style="green", style="green",
+                     min_width=12)
+    table.add_column("Date", style="magenta", header_style="magenta",
+                     min_width=8)
+
+    for i, entry in enumerate(entries):
+        table.add_row(entry[0], entry[1], str(entry[2]), str(entry[3]))
+
+    console.print(table)
+
+    conn, cur = create_connection()
+    monthly_cals = get_monthly_calories(username, conn, cur)
+    conn, cur = create_connection()
+    cal_goal = get_cal_goal(username, conn, cur)
+    cal_goal *= 30
+
+    console.print(
+        f"[green3]Monthly Calories: {monthly_cals} / [/green3]" +
+        f"[bold red]{cal_goal}[/bold red]"
+        )
+
+    if monthly_cals > cal_goal:
+        console.print(
+            ":warning:" + " " +
+            "[bold red]You have exceeded your monthly calorie goal![/bold red]"
+            + ":warning:"
+            )
+    else:
+        console.print(
+            ":white_heavy_check_mark:" + " " +
+            "[bold green]You are within your monthly calorie goal![/]"
+            + ":white_heavy_check_mark:"
         )
 
 
