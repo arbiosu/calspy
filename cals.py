@@ -2,6 +2,7 @@ import typer
 import datetime
 from rich.console import Console
 from rich.table import Table
+from typing_extensions import Annotated
 from models import User, Macro, Food
 from database import (
     create_connection,
@@ -14,6 +15,7 @@ from database import (
     get_total_calories_today,
     get_cal_goal,
     get_all_foods,
+    update_food_item,
 )
 
 
@@ -115,6 +117,45 @@ def foods():
                       str(food[5]))
 
     console.print(table)
+
+
+@app.command(short_help="Update a food item, user, or macro.")
+def upd(
+    food: Annotated[str, typer.Option(help="given name is a food")] = "",
+    user: Annotated[str, typer.Option(help="given name is a user.")] = "",
+    macro: Annotated[str, typer.Option(help="given name is a macro.")] = ""
+
+):
+    if food:
+        print(
+            f"Please enter the values you would like to UPDATE for {food}" +
+            "(type: [bold red] food)[/bold red]"
+            )
+        cols, food_item = [], Food(food)  # store columns user wants to update
+
+        calories = input("Calories: ")
+        cols.append("calories") if calories != "" else None
+        food_item.calories = int(calories) if calories != "" else None
+
+        protein = input("Protein: ")
+        cols.append("protein") if protein != "" else None
+        food_item.protein = int(protein) if protein != "" else None
+
+        fat = input("Fat: ")
+        cols.append("fat") if fat != "" else None
+        food_item.fat = int(fat) if fat != "" else None
+
+        carbs = input("Carbs: ")
+        cols.append("carbs") if carbs != "" else None
+        food_item.carbs = int(carbs) if carbs != "" else None
+
+        conn, cur = create_connection()
+        typer.echo("Updating food item...")
+        update_food_item(food_item, cols, conn, cur)
+    if user:
+        pass
+    if macro:
+        pass
 
 
 if __name__ == '__main__':
