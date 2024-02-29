@@ -450,6 +450,33 @@ def create_entry(username: str, food_name: str, conn, cur):
         conn.close()
 
 
+def adjust_entry(username: str, food_name: str, date: str, conn, cur):
+    """
+    Adjusts a foodentry for a user. Only allows you to retroactively add to
+    your daily diary.
+
+    Args:
+        username: a string representing the user who is logging the entry.
+        food_name: a string representing the name of the food consumed.
+        date: a string representing the date of the entry. (YYYY-MM-DD)
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    food_id = select_food_item(food_name, conn, cur)
+    sql = "INSERT INTO foodentries(foodID, userID, date) VALUES(?, ?, ?)"
+
+    try:
+        cur.execute(sql, (food_id, user_id, date))
+        conn.commit()
+        print(f"Successfully adjusted this entry for user {username}")
+    except sqlite3.Error as e:
+        print(f"Could not adjust this entry! ({e})")
+    finally:
+        conn.close()
+
+
 def show_current_entry(username: str, conn, cur):
     """
     Shows all entries for today.
@@ -514,6 +541,39 @@ def show_weekly_entries(username: str, conn, cur):
         conn.close()
 
 
+def show_monthly_entries(username: str, conn, cur):
+    """
+    Shows all entries for the current month.
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    Returns:
+        rows:a table showing all entries a user has made for the current month.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT users.username, foods.name, foods.calories, foodentries.date
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE foodentries.date BETWEEN DATE('now', 'start of month') AND
+    DATE('now', 'start of month', '+1 month', '-1 day') AND users.id = ?
+    ORDER BY foodentries.date ASC
+    """
+
+    try:
+        cur.execute(sql, (user_id,))
+        rows = cur.fetchall()
+        return rows
+    except sqlite3.Error as e:
+        print(f"Could not fetch the monthly entries for {username}! ({e})")
+    finally:
+        conn.close()
+
+
 def get_total_calories_today(username: str, conn, cur):
     """
     Gets the user's total caloric intake for today.
@@ -570,6 +630,36 @@ def get_weekly_calories(username: str, conn, cur):
         return weekly_calories
     except sqlite3.Error as e:
         print(f"Could not fetch {username}'s weekly calories! ({e})")
+    finally:
+        conn.close()
+
+
+def get_monthly_calories(username: str, conn, cur):
+    """
+    Gets the user's total caloric intake for the current month.
+
+    Args:
+        username: a string representing the user
+        conn (sqlite3.Connection): A connection object.
+        curr (sqlite3.Cursor): A cursor object for executing SQL queries.
+    """
+
+    user_id = select_specific_user(username, conn, cur)
+    sql = """
+    SELECT SUM(foods.calories)
+    FROM foodentries
+    JOIN users ON foodentries.userID = users.id
+    JOIN foods ON foodentries.foodID = foods.id
+    WHERE foodentries.date BETWEEN DATE('now', 'start of month') AND
+    DATE('now', 'start of month', '+1 month', '-1 day') AND users.id = ?
+    """
+
+    try:
+        cur.execute(sql, (user_id,))
+        monthly_calories = cur.fetchone()[0]
+        return monthly_calories
+    except sqlite3.Error as e:
+        print(f"Could not fetch {username}'s monthly calories! ({e})")
     finally:
         conn.close()
 
