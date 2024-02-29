@@ -11,10 +11,10 @@ class User:
 
     """
 
-    def __init__(self, username, weight, weight_goal):
+    def __init__(self, username, weight=None, weightGoal=None):
         self.username = username
         self.weight = weight
-        self.weight_goal = weight_goal
+        self.weightGoal = weightGoal
 
 
 class Macro:
