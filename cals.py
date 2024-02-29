@@ -11,6 +11,9 @@ from database import (
     create_food,
     create_entry,
     show_current_entry,
+    get_total_calories_today,
+    get_cal_goal,
+    get_all_foods,
 )
 
 
@@ -64,21 +67,54 @@ def show(username: str):
 
     conn, cur = create_connection()
     entries = show_current_entry(username, conn, cur)
-    console.print("[bold magenta]Food Diary[/bold magenta]")
 
-    table = Table(show_header=True, header_style="bold blue")
-    table.add_column("User", style="dim", width=6)
-    table.add_column("Meal", min_width=20)
-    table.add_column("Calories", min_width=12)
-    table.add_column("Date", min_width=12)
-    table.add_column("Time", min_width=12)
+    conn, cur = create_connection()
+    total_cals = get_total_calories_today(username, conn, cur)
+
+    conn, cur = create_connection()
+    cal_goal = get_cal_goal(username, conn, cur)
+
+    console.print("[bold magenta]Food Diary:  [/bold magenta]" + f"{today}")
+
+    table = Table(show_header=True)
+    table.add_column("User", style="dim", header_style="red", width=6)
+    table.add_column("Meal", justify="center", min_width=20)
+    table.add_column("Calories", header_style="green", style="green",
+                     min_width=12)
+    table.add_column("Time", style="magenta", header_style="magenta",
+                     min_width=8)
 
     for i, entry in enumerate(entries):
         table.add_row(entry[0], entry[1], str(entry[2]), str(entry[3]))
 
     console.print(table)
 
-    conn.close()
+    console.print(
+        f"[green3] Total Calories: {total_cals} / [/green3]" +
+        f"[bold red]{cal_goal}[/bold red]"
+        )
+
+
+@app.command(short_help="Retrieves all foods in the database.")
+def foods():
+    typer.echo("Retrieving all food items...")
+
+    conn, cur = create_connection()
+    foods = get_all_foods(conn, cur)
+
+    table = Table()
+    table.add_column("Name")
+    table.add_column("Calories", header_style="green", style="green")
+    table.add_column("Protein", header_style="purple", style="purple")
+    table.add_column("Fat", header_style="dark_orange", style="dark_orange")
+    table.add_column("Carbs", header_style="light_sky_blue1",
+                     style="light_sky_blue1")
+
+    for i, food in enumerate(foods):
+        table.add_row(food[1], str(food[2]), str(food[3]), str(food[4]),
+                      str(food[5]))
+
+    console.print(table)
 
 
 if __name__ == '__main__':
